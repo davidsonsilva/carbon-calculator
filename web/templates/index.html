@@ -6,6 +6,8 @@
     <title>EcoTrip — Calculadora de Emissão de CO₂</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -33,20 +35,61 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding: 48px 16px 80px;
+            padding: 0 0 80px;
         }
 
-        /* subtle grid texture */
-        body::before {
-            content: '';
-            position: fixed;
+        /* ── Map hero ── */
+        #map-hero {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            min-height: 600px;
+        }
+
+        #map {
+            position: absolute;
             inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 48px 48px;
+            width: 100%;
+            height: 100%;
+            transform: perspective(900px) rotateX(8deg) scale(1.08);
+            transform-origin: center top;
+            filter: brightness(0.45) saturate(0.7);
+            transition: filter 0.6s ease;
+        }
+
+        #map.has-route {
+            filter: brightness(0.6) saturate(0.9);
+        }
+
+        /* overlay gradient over the map */
+        #map-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center top, transparent 20%, rgba(15,15,19,0.5) 70%),
+                linear-gradient(to bottom, transparent 50%, var(--bg) 100%);
             pointer-events: none;
-            z-index: 0;
+            z-index: 1;
+        }
+
+        /* hero content over the map */
+        .hero-content {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        /* below-map content */
+        .below-map {
+            position: relative;
+            z-index: 1;
+            padding: 0 16px 0;
         }
 
         .wrapper {
@@ -54,6 +97,7 @@
             z-index: 1;
             max-width: 640px;
             margin: 0 auto;
+            width: 100%;
         }
 
         /* ── Header ── */
@@ -628,6 +672,25 @@
         .platform-link .pl-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
         .platform-link .pl-desc { font-size: 0.75rem; color: var(--text-muted); }
 
+        /* ── Leaflet overrides ── */
+        .leaflet-control-zoom,
+        .leaflet-control-attribution { display: none !important; }
+
+        .leaflet-container { background: #0f0f13; cursor: default !important; }
+
+        /* custom marker */
+        .transport-marker {
+            width: 36px; height: 36px;
+            background: rgba(124,58,237,0.85);
+            border: 2px solid rgba(167,139,250,0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 0 16px rgba(124,58,237,0.6);
+        }
+
         /* ── Responsive ── */
         @media (max-width: 520px) {
             body { padding: 32px 12px 60px; }
@@ -642,20 +705,25 @@
     </style>
 </head>
 <body>
-<div class="wrapper">
 
-    <!-- Header -->
-    <header>
-        <div class="logo">
-            <div class="logo-dot"></div>
-            EcoTrip
-        </div>
-        <h1>Calcule suas<br><span>emissões de CO₂</span></h1>
-        <p>Estime o impacto de CO₂ da sua viagem e descubra como compensar</p>
-    </header>
+<!-- Map hero -->
+<div id="map-hero">
+    <div id="map"></div>
+    <div class="hero-content">
+        <div class="wrapper">
 
-    <!-- Form card -->
-    <div class="glass form-card">
+            <!-- Header -->
+            <header>
+                <div class="logo">
+                    <div class="logo-dot"></div>
+                    EcoTrip
+                </div>
+                <h1>Calcule suas<br><span>emissões de CO₂</span></h1>
+                <p>Estime o impacto de CO₂ da sua viagem e descubra como compensar</p>
+            </header>
+
+            <!-- Form card -->
+            <div class="glass form-card">
         <form id="co2Form">
             <div class="input-row form-group">
                 <div>
@@ -706,7 +774,13 @@
         </form>
     </div>
 
-    <!-- Results -->
+        </div><!-- /.wrapper -->
+    </div><!-- /.hero-content -->
+</div><!-- /#map-hero -->
+
+<!-- Results below map -->
+<div class="below-map">
+<div class="wrapper">
     <div id="resultsSection">
 
         <!-- 3 summary cards -->
@@ -761,7 +835,8 @@
         </div>
 
     </div>
-</div>
+</div><!-- /.wrapper -->
+</div><!-- /.below-map -->
 
 <!-- Modal -->
 <div class="modal-overlay" id="compensateModal" role="dialog" aria-modal="true">
@@ -814,6 +889,98 @@
 </div>
 
 <script>
+    // ── Map ──
+    const CAPITAIS_COORDS = {
+        'Rio Branco (AC)':      [-9.975,  -67.824],
+        'Maceió (AL)':          [-9.666,  -35.735],
+        'Macapá (AP)':          [0.034,   -51.066],
+        'Manaus (AM)':          [-3.119,  -60.022],
+        'Salvador (BA)':        [-12.971, -38.501],
+        'Fortaleza (CE)':       [-3.717,  -38.543],
+        'Brasília (DF)':        [-15.780, -47.929],
+        'Vitória (ES)':         [-20.319, -40.338],
+        'Goiânia (GO)':         [-16.686, -49.264],
+        'São Luís (MA)':        [-2.530,  -44.303],
+        'Cuiabá (MT)':          [-15.601, -56.097],
+        'Campo Grande (MS)':    [-20.469, -54.620],
+        'Belo Horizonte (MG)':  [-19.917, -43.934],
+        'Belém (PA)':           [-1.455,  -48.502],
+        'João Pessoa (PB)':     [-7.115,  -34.863],
+        'Curitiba (PR)':        [-25.429, -49.271],
+        'Recife (PE)':          [-8.054,  -34.881],
+        'Teresina (PI)':        [-5.092,  -42.803],
+        'Rio de Janeiro (RJ)':  [-22.906, -43.172],
+        'Natal (RN)':           [-5.794,  -35.211],
+        'Porto Alegre (RS)':    [-30.033, -51.230],
+        'Porto Velho (RO)':     [-8.761,  -63.900],
+        'Boa Vista (RR)':       [2.820,   -60.672],
+        'Florianópolis (SC)':   [-27.595, -48.548],
+        'São Paulo (SP)':       [-23.550, -46.633],
+        'Aracaju (SE)':         [-10.909, -37.042],
+        'Palmas (TO)':          [-10.240, -48.355],
+    };
+
+    const map = L.map('map', {
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+        keyboard: false,
+        attributionControl: false,
+    }).setView([-14.235, -51.925], 4);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+    }).addTo(map);
+
+    let originMarker = null, destMarker = null, routeLine = null;
+
+    function makeMarkerIcon(emoji) {
+        return L.divIcon({
+            className: '',
+            html: `<div class="transport-marker">${emoji}</div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+        });
+    }
+
+    function updateMap(originKey, destKey, transportEmoji) {
+        const oCoords = CAPITAIS_COORDS[originKey];
+        const dCoords = CAPITAIS_COORDS[destKey];
+        if (!oCoords || !dCoords) return;
+
+        // remove previous
+        if (originMarker) map.removeLayer(originMarker);
+        if (destMarker)   map.removeLayer(destMarker);
+        if (routeLine)    map.removeLayer(routeLine);
+
+        const emoji = transportEmoji || '📍';
+        originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
+        destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
+
+        // animated dashed line
+        routeLine = L.polyline([oCoords, dCoords], {
+            color: '#7c3aed',
+            weight: 2.5,
+            opacity: 0.9,
+            dashArray: '8 6',
+        }).addTo(map);
+
+        // fit bounds with padding
+        map.fitBounds(L.latLngBounds([oCoords, dCoords]), { padding: [80, 80], animate: true, duration: 1 });
+        document.getElementById('map').classList.add('has-route');
+    }
+
+    // trigger map update when destination is filled
+    function tryUpdateMap() {
+        const originVal = document.getElementById('origin').value.trim();
+        const destVal   = document.getElementById('destination').value.trim();
+        if (!originVal || !destVal) return;
+        const selEmoji = document.querySelector('.transport-card.selected .emoji');
+        updateMap(originVal, destVal, selEmoji ? selEmoji.textContent : '📍');
+    }
+
     // ── Datalist ──
     const capitais = [
         'Rio Branco (AC)','Maceió (AL)','Macapá (AP)','Manaus (AM)',
@@ -842,7 +1009,10 @@
     document.getElementById('destination').addEventListener('blur', function() {
         if (!manualCheck.checked && this.value.trim())
             distanceInput.value = Math.floor(Math.random() * 500) + 50;
+        tryUpdateMap();
     });
+
+    document.getElementById('origin').addEventListener('blur', tryUpdateMap);
 
     // ── Transport selection ──
     const transportCards = document.querySelectorAll('.transport-card');
@@ -853,6 +1023,7 @@
             transportCards.forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
             selectedFactor = parseFloat(this.dataset.factor);
+            tryUpdateMap();
         });
     });
 
