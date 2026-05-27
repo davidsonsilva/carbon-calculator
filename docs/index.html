@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Emissão de CO₂</title>
+    <link rel="stylesheet" href="static/css/m3-theme.css">
+    <style>
+        .wrapper {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        h1 {
+            font: var(--md-sys-typescale-headline-medium);
+            color: var(--md-sys-color-primary);
+        }
+
+        header p {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface-variant);
+            max-width: 420px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .card-panel {
+            background: var(--md-sys-color-surface);
+            border-radius: var(--md-sys-shape-corner-extra-large);
+            padding: 32px;
+            box-shadow: var(--md-sys-elevation-2);
+            margin: 40px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font: var(--md-sys-typescale-label-large);
+            color: var(--md-sys-color-on-surface);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: var(--md-sys-shape-corner-small);
+            font: var(--md-sys-typescale-body-large);
+            background: var(--md-sys-color-surface-variant);
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            background: var(--md-sys-color-surface);
+            box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+        }
+
+        input:disabled {
+            background: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: not-allowed;
+        }
+
+        .info-note {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface-variant);
+            margin-top: 6px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface);
+            cursor: pointer;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--md-sys-color-primary);
+            cursor: pointer;
+        }
+
+        .transport-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .transport-card {
+            border: 1px solid var(--md-sys-color-outline);
+            background: var(--md-sys-color-surface);
+            border-radius: var(--md-sys-shape-corner-medium);
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transport-card .emoji {
+            font-size: 24px;
+        }
+
+        .transport-card span {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface);
+        }
+
+        .transport-card:hover {
+            border-color: var(--md-sys-color-primary);
+            background: var(--md-sys-color-surface-variant);
+        }
+
+        .transport-card.selected {
+            background: var(--md-sys-color-secondary-container);
+            border-color: var(--md-sys-color-secondary);
+            box-shadow: 0 0 0 1px var(--md-sys-color-secondary);
+        }
+
+        button.btn-submit {
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            border-radius: var(--md-sys-shape-corner-medium);
+            font: var(--md-sys-typescale-label-large);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        button.btn-submit:hover {
+            background: #115e59;
+        }
+
+        .result-panel {
+            background: var(--md-sys-color-primary-container);
+            border-radius: var(--md-sys-shape-corner-large);
+            padding: 24px;
+            margin-top: 24px;
+            text-align: center;
+            border: 1px solid rgba(21, 128, 61, 0.2);
+            display: none;
+        }
+
+        .result-panel.active {
+            display: block;
+        }
+
+        .result-panel h3 {
+            font: var(--md-sys-typescale-label-large);
+            color: var(--md-sys-color-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--md-sys-color-on-primary-container);
+        }
+
+        #resultImages {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .emission-card {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            margin: 0 20px 24px;
+            display: none;
+        }
+
+        .emission-card.active {
+            display: block;
+        }
+
+        .emission-card .card-header {
+            background-color: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .emission-card .card-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #212529;
+        }
+
+        .emission-card .card-body {
+            padding: 20px;
+        }
+
+        .emission-card .info-group {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .emission-card .info-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .emission-card .icon {
+            font-size: 1.2rem;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+
+        .emission-card .info-content label {
+            display: block;
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .emission-card .info-content p {
+            margin: 0;
+            font-size: 1rem;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .emission-card .info-content p.highlight {
+            color: #2b9348;
+            font-weight: 700;
+        }
+
+        .comparison-card {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            margin: 0 20px 24px;
+            display: none;
+        }
+
+        .comparison-card.active {
+            display: block;
+        }
+
+        .comparison-card .card-header {
+            background-color: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-card .card-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #212529;
+        }
+
+        .comparison-card .card-body {
+            padding: 20px;
+        }
+
+        .comparison-card .transport-item {
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .comparison-card .transport-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .comparison-card .transport-item.highlighted {
+            background-color: #f1f8ff;
+            border-left: 4px solid #007bff;
+        }
+
+        .comparison-card .transport-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .comparison-card .icon {
+            font-size: 1.3rem;
+            margin-right: 12px;
+        }
+
+        .comparison-card .name {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        .comparison-card .emission {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .comparison-card .progress-bar {
+            background-color: #e9ecef;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .comparison-card .progress {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .comparison-card .fill-bike  { background-color: #2b9348; }
+        .comparison-card .fill-bus   { background-color: #ffb703; }
+        .comparison-card .fill-car   { background-color: #007bff; }
+        .comparison-card .fill-truck { background-color: #e63946; }
+
+        .comparison-card .card-footer {
+            background-color: #f4fbf7;
+            padding: 14px 20px;
+            border-top: 1px solid #e2f0d9;
+            font-size: 0.85rem;
+            color: #2b9348;
+            line-height: 1.4;
+        }
+
+        .comparison-card .card-footer p { margin: 0; }
+
+        .carbon-credits-card {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            margin: 0 20px 24px;
+            display: none;
+        }
+
+        .carbon-credits-card.active {
+            display: block;
+        }
+
+        .carbon-credits-card .card-header {
+            background-color: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .carbon-credits-card .card-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #212529;
+        }
+
+        .carbon-credits-card .card-body {
+            padding: 20px;
+        }
+
+        .carbon-credits-card .info-block {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .carbon-credits-card .main-icon {
+            font-size: 1.4rem;
+            margin-right: 14px;
+            margin-top: 2px;
+        }
+
+        .carbon-credits-card .block-content label {
+            display: block;
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .carbon-credits-card .block-content .value {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .carbon-credits-card .block-content .value.price {
+            color: #2b9348;
+        }
+
+        .carbon-credits-card .block-content .subtext {
+            font-size: 0.8rem;
+            color: #868e96;
+        }
+
+        .carbon-credits-card .divider {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 16px 0;
+        }
+
+        .carbon-credits-card .explanation-section h3 {
+            margin: 0 0 6px 0;
+            font-size: 0.95rem;
+            color: #343a40;
+            font-weight: 600;
+        }
+
+        .carbon-credits-card .explanation-section p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #495057;
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        .carbon-credits-card .action-btn {
+            display: block;
+            width: 100%;
+            background-color: #2b9348;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .carbon-credits-card .action-btn:hover {
+            background-color: #1e7134;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+            transform: translateY(12px);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            background-color: #f4fbf7;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e2f0d9;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            color: #1e7134;
+        }
+
+        .modal-header .modal-subtitle {
+            margin: 4px 0 0;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: #6c757d;
+            line-height: 1;
+            padding: 2px 4px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover { background: #e9ecef; }
+
+        .modal-summary {
+            background: #f4fbf7;
+            margin: 20px 24px 0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            gap: 24px;
+        }
+
+        .modal-summary .stat label {
+            display: block;
+            font-size: 0.78rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .modal-summary .stat p {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e7134;
+        }
+
+        .modal-steps {
+            padding: 20px 24px;
+        }
+
+        .modal-steps h3 {
+            margin: 0 0 14px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #495057;
+        }
+
+        .modal-step {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 14px;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #2b9348;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .step-text {
+            font-size: 0.88rem;
+            color: #495057;
+            line-height: 1.5;
+        }
+
+        .step-text strong { color: #212529; }
+
+        .modal-platforms {
+            padding: 0 24px 20px;
+        }
+
+        .modal-platforms h3 {
+            margin: 0 0 12px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #495057;
+        }
+
+        .platform-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .platform-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #212529;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .platform-link:hover {
+            background: #f4fbf7;
+            border-color: #2b9348;
+        }
+
+        .platform-link .pl-icon { font-size: 1.1rem; }
+
+        .platform-link .pl-desc {
+            font-size: 0.78rem;
+            color: #6c757d;
+            font-weight: 400;
+        }
+
+        @media (max-width: 600px) {
+            .transport-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <header>
+            <div class="logo-area">
+                <span class="logo-icon">🌿</span>
+                <h1>Calculadora de Emissão de CO₂</h1>
+            </div>
+            <p>Calcule as emissões de CO₂ das suas viagens e contribua para um planeta mais sustentável</p>
+        </header>
+
+        <main class="card-panel">
+            <form id="co2Form">
+                <div class="form-group">
+                    <label for="origin">Origem</label>
+                    <input type="text" id="origin" list="capitais-list" placeholder="Digite a cidade de origem" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="destination">Destino</label>
+                    <input type="text" id="destination" list="capitais-list" placeholder="Digite a cidade de destino" required>
+                </div>
+
+                <datalist id="capitais-list"></datalist>
+
+                <div class="form-group">
+                    <label for="distance">Distância (km)</label>
+                    <input type="number" id="distance" value="0" min="0" disabled required>
+                    <p class="info-note" id="distanceNote">A distância será preenchida automaticamente</p>
+                    
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="manualDistance">
+                        Inserir distância manualmente
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Meio de Transporte</label>
+                    <div class="transport-grid">
+                        <div class="transport-card" data-factor="0.00">
+                            <span class="emoji">🚲</span>
+                            <span>Bicicleta</span>
+                        </div>
+                        <div class="transport-card selected" data-factor="0.14">
+                            <span class="emoji">🚗</span>
+                            <span>Carro</span>
+                        </div>
+                        <div class="transport-card" data-factor="0.04">
+                            <span class="emoji">🚌</span>
+                            <span>Ônibus</span>
+                        </div>
+                        <div class="transport-card" data-factor="0.25">
+                            <span class="emoji">🚚</span>
+                            <span>Caminhão</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Calcular Emissão</button>
+            </form>
+
+            <div class="result-panel" id="resultPanel">
+                <h3>Resultado da Emissão</h3>
+                <p class="result-value"><span id="co2Result">0.0</span> kg de CO₂</p>
+            </div>
+
+            <div id="resultSummary"></div>
+
+            <div id="resultComparison"></div>
+
+            <div id="resultImages" class="m3-image-grid">
+                <div class="m3-image-card"><div class="caption">Árvores para compensar</div></div>
+                <div class="m3-image-card"><div class="caption">Comparativo de modos</div></div>
+                <div class="m3-image-card"><div class="caption">Sugestões de mitigação</div></div>
+            </div>
+        </main>
+
+        <div class="emission-card" id="emissionCard">
+            <div class="card-header">
+                <h2>Resultados da Emissão</h2>
+            </div>
+            <div class="card-body">
+                <div class="info-group">
+                    <span class="icon">📍</span>
+                    <div class="info-content">
+                        <label>Rota</label>
+                        <p id="ecRoute">—</p>
+                    </div>
+                </div>
+                <div class="info-group">
+                    <span class="icon">🛣️</span>
+                    <div class="info-content">
+                        <label>Distância</label>
+                        <p id="ecDistance">—</p>
+                    </div>
+                </div>
+                <div class="info-group">
+                    <span class="icon">🌿</span>
+                    <div class="info-content">
+                        <label>Emissão de CO₂</label>
+                        <p class="highlight" id="ecEmission">—</p>
+                    </div>
+                </div>
+                <div class="info-group">
+                    <span class="icon">🚗</span>
+                    <div class="info-content">
+                        <label>Meio de Transporte</label>
+                        <p id="ecMode">—</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison-card" id="comparisonCard">
+            <div class="card-header">
+                <h2>Comparação entre Meios de Transporte</h2>
+            </div>
+            <div class="card-body" id="comparisonBody"></div>
+            <div class="card-footer">
+                <p>💡 <strong>Dica:</strong> Escolher meios de transporte mais sustentáveis ajuda a reduzir significativamente as emissões de CO₂ e contribui para um planeta mais saudável!</p>
+            </div>
+        </div>
+
+        <div class="carbon-credits-card" id="creditsCard">
+            <div class="card-header">
+                <h2>Créditos de Carbono</h2>
+            </div>
+            <div class="card-body">
+                <div class="info-block">
+                    <span class="main-icon">🌳</span>
+                    <div class="block-content">
+                        <label>Créditos Necessários</label>
+                        <p class="value" id="ccCredits">—</p>
+                        <span class="subtext">1 crédito = 1.000 kg CO₂</span>
+                    </div>
+                </div>
+                <div class="info-block">
+                    <span class="main-icon">💰</span>
+                    <div class="block-content">
+                        <label>Custo Estimado</label>
+                        <p class="value price" id="ccCost">—</p>
+                        <span class="subtext" id="ccRange">—</span>
+                    </div>
+                </div>
+                <hr class="divider">
+                <div class="explanation-section">
+                    <h3>O que são Créditos de Carbono?</h3>
+                    <p>Créditos de carbono são certificados que representam a redução de uma tonelada de CO₂ da atmosfera. Ao comprar créditos, você compensa suas emissões financiando projetos de preservação ambiental, reflorestamento e energia renovável.</p>
+                </div>
+                <button class="action-btn">Compensar Emissões</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Compensar Emissões -->
+    <div class="modal-overlay" id="compensateModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTitle">🌱 Compensar Emissões</h2>
+                    <p class="modal-subtitle">Neutralize o impacto da sua viagem</p>
+                </div>
+                <button class="modal-close" id="modalClose" aria-label="Fechar">✕</button>
+            </div>
+
+            <div class="modal-summary">
+                <div class="stat">
+                    <label>Emissão da viagem</label>
+                    <p id="modalEmission">—</p>
+                </div>
+                <div class="stat">
+                    <label>Créditos necessários</label>
+                    <p id="modalCredits">—</p>
+                </div>
+                <div class="stat">
+                    <label>Custo estimado</label>
+                    <p id="modalCost">—</p>
+                </div>
+            </div>
+
+            <div class="modal-steps">
+                <h3>Como compensar</h3>
+                <div class="modal-step">
+                    <span class="step-num">1</span>
+                    <span class="step-text"><strong>Escolha uma plataforma</strong> certificada abaixo (Verra, Gold Standard ou MOSS).</span>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">2</span>
+                    <span class="step-text"><strong>Adquira <span id="modalCreditsInline">—</span> crédito(s)</strong> de carbono — cada crédito equivale a 1 tonelada de CO₂ compensada.</span>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">3</span>
+                    <span class="step-text"><strong>Receba o certificado</strong> de compensação e contribua para projetos de reflorestamento e energia renovável.</span>
+                </div>
+            </div>
+
+            <div class="modal-platforms">
+                <h3>Plataformas certificadas</h3>
+                <div class="platform-links">
+                    <a class="platform-link" href="https://verra.org" target="_blank" rel="noopener">
+                        <span class="pl-icon">🌍</span>
+                        <div>
+                            <div>Verra (VCS)</div>
+                            <div class="pl-desc">Verified Carbon Standard — maior registro global de créditos de carbono</div>
+                        </div>
+                    </a>
+                    <a class="platform-link" href="https://www.goldstandard.org" target="_blank" rel="noopener">
+                        <span class="pl-icon">⭐</span>
+                        <div>
+                            <div>Gold Standard</div>
+                            <div class="pl-desc">Certificação rigorosa com foco em desenvolvimento sustentável</div>
+                        </div>
+                    </a>
+                    <a class="platform-link" href="https://moss.earth" target="_blank" rel="noopener">
+                        <span class="pl-icon">🇧🇷</span>
+                        <div>
+                            <div>MOSS Earth</div>
+                            <div class="pl-desc">Plataforma brasileira — projetos na Amazônia, compra via MCO2 token</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const capitais = [
+            'Rio Branco (AC)', 'Maceió (AL)', 'Macapá (AP)', 'Manaus (AM)',
+            'Salvador (BA)', 'Fortaleza (CE)', 'Brasília (DF)', 'Vitória (ES)',
+            'Goiânia (GO)', 'São Luís (MA)', 'Cuiabá (MT)', 'Campo Grande (MS)',
+            'Belo Horizonte (MG)', 'Belém (PA)', 'João Pessoa (PB)', 'Curitiba (PR)',
+            'Recife (PE)', 'Teresina (PI)', 'Rio de Janeiro (RJ)', 'Natal (RN)',
+            'Porto Alegre (RS)', 'Porto Velho (RO)', 'Boa Vista (RR)', 'Florianópolis (SC)',
+            'São Paulo (SP)', 'Aracaju (SE)', 'Palmas (TO)'
+        ];
+
+        const datalist = document.getElementById('capitais-list');
+        capitais.forEach(capital => {
+            const option = document.createElement('option');
+            option.value = capital;
+            datalist.appendChild(option);
+        });
+
+        const manualDistanceCheck = document.getElementById('manualDistance');
+        const distanceInput = document.getElementById('distance');
+        const distanceNote = document.getElementById('distanceNote');
+        const cards = document.querySelectorAll('.transport-card');
+        const form = document.getElementById('co2Form');
+        const resultPanel = document.getElementById('resultPanel');
+        const co2Result = document.getElementById('co2Result');
+        
+        let selectedFactor = 0.14; // Padrão: Carro
+
+        // Alterna entre modo manual e automático de distância
+        manualDistanceCheck.addEventListener('change', function() {
+            if (this.checked) {
+                distanceInput.disabled = false;
+                distanceInput.value = '';
+                distanceNote.style.display = 'none';
+                distanceInput.focus();
+            } else {
+                distanceInput.disabled = true;
+                distanceInput.value = '0';
+                distanceNote.style.display = 'block';
+            }
+        });
+
+        // Simulação automática ao digitar destinos (caso não esteja no modo manual)
+        document.getElementById('destination').addEventListener('blur', function() {
+            if (!manualDistanceCheck.checked && this.value.trim() !== '') {
+                distanceInput.value = Math.floor(Math.random() * 500) + 50;
+            }
+        });
+
+        cards.forEach(card => {
+            card.addEventListener('click', function() {
+                cards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedFactor = parseFloat(this.dataset.factor);
+            });
+        });
+
+        const emissionCard    = document.getElementById('emissionCard');
+        const comparisonCard  = document.getElementById('comparisonCard');
+        const comparisonBody  = document.getElementById('comparisonBody');
+        const creditsCard     = document.getElementById('creditsCard');
+        const compensateModal = document.getElementById('compensateModal');
+        const modalClose      = document.getElementById('modalClose');
+
+        const PRICE_PER_CREDIT = 100; // R$ por tonelada (1 crédito = 1.000 kg)
+
+        function fmt(n) { return n.toFixed(2).replace('.', ','); }
+        function fmtBRL(n) { return 'R$ ' + fmt(n); }
+
+        function openCompensateModal(emissionKg) {
+            const credits = emissionKg / 1000;
+            const cost    = credits * PRICE_PER_CREDIT;
+
+            document.getElementById('modalEmission').textContent      = fmt(emissionKg) + ' kg';
+            document.getElementById('modalCredits').textContent       = credits.toFixed(4).replace('.', ',');
+            document.getElementById('modalCost').textContent          = fmtBRL(cost);
+            document.getElementById('modalCreditsInline').textContent = credits.toFixed(4).replace('.', ',');
+
+            compensateModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCompensateModal() {
+            compensateModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        modalClose.addEventListener('click', closeCompensateModal);
+        compensateModal.addEventListener('click', function(e) {
+            if (e.target === compensateModal) closeCompensateModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeCompensateModal();
+        });
+
+        function renderCreditsCard(emissionKg) {
+            const credits  = emissionKg / 1000;
+            const cost     = credits * PRICE_PER_CREDIT;
+            const costMin  = cost * 0.5;
+            const costMax  = cost * 1.5;
+
+            document.getElementById('ccCredits').textContent = credits.toFixed(4).replace('.', ',');
+            document.getElementById('ccCost').textContent    = fmtBRL(cost);
+            document.getElementById('ccRange').textContent   = `Variação: ${fmtBRL(costMin)} - ${fmtBRL(costMax)}`;
+
+            creditsCard.classList.add('active');
+
+            creditsCard.querySelector('.action-btn').onclick = () => openCompensateModal(emissionKg);
+        }
+
+        const ALL_MODES = [
+            { emoji: '🚲', name: 'Bicicleta',  factor: 0.00, fill: 'fill-bike'  },
+            { emoji: '🚌', name: 'Ônibus',     factor: 0.04, fill: 'fill-bus'   },
+            { emoji: '🚗', name: 'Carro',      factor: 0.14, fill: 'fill-car'   },
+            { emoji: '🚚', name: 'Caminhão',   factor: 0.25, fill: 'fill-truck' },
+        ];
+
+        function renderComparison(distance, selectedFactor) {
+            const selectedEmission = distance * selectedFactor;
+            const selectedMode     = ALL_MODES.find(m => m.factor === selectedFactor);
+
+            comparisonBody.innerHTML = ALL_MODES.map(mode => {
+                const modeEmission = distance * mode.factor;
+                const pct          = selectedEmission > 0
+                    ? (modeEmission / selectedEmission) * 100
+                    : (mode.factor === 0 ? 0 : 100);
+                const barWidth     = modeEmission === 0 ? 1 : Math.min(pct, 100);
+                const isSelected   = mode.factor === selectedFactor;
+                const label        = isSelected
+                    ? `${mode.name} <em>(selecionado)</em>`
+                    : mode.name;
+
+                return `
+                <div class="transport-item${isSelected ? ' highlighted' : ''}">
+                    <div class="transport-info">
+                        <span class="icon">${mode.emoji}</span>
+                        <div>
+                            <span class="name">${label}</span>
+                            <span class="emission">
+                                ${modeEmission.toFixed(2).replace('.', ',')} kg CO₂
+                                (vs ${selectedMode ? selectedMode.name : 'selecionado'}: ${pct.toFixed(2).replace('.', ',')}%)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress ${mode.fill}" style="width: ${barWidth}%"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            comparisonCard.classList.add('active');
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const origin      = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const distance    = parseFloat(distanceInput.value) || 0;
+            const emission    = distance * selectedFactor;
+            const modeEl      = document.querySelector('.transport-card.selected span:last-child');
+            const modeName    = modeEl ? modeEl.textContent : '—';
+
+            // legacy result panel
+            co2Result.textContent = emission.toFixed(2);
+            resultPanel.classList.add('active');
+
+            // emission card
+            document.getElementById('ecRoute').textContent =
+                (origin && destination) ? `${origin} → ${destination}` : '—';
+            document.getElementById('ecDistance').textContent =
+                distance > 0 ? `${distance} km` : '—';
+            document.getElementById('ecEmission').textContent =
+                `${emission.toFixed(2).replace('.', ',')} kg`;
+            document.getElementById('ecMode').textContent = modeName;
+
+            emissionCard.classList.add('active');
+            renderComparison(distance, selectedFactor);
+            renderCreditsCard(emission);
+            emissionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+    </script>
+</body>
+</html>
