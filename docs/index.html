@@ -937,10 +937,11 @@
 
     let originMarker = null, destMarker = null, routeLine = null;
 
-    function makeMarkerIcon(emoji) {
+    function makeMarkerIcon(emoji, color) {
+        const c = color || selectedColor;
         return L.divIcon({
             className: '',
-            html: `<div class="transport-marker" style="background:${lineColor || selectedColor};box-shadow:0 0 16px ${lineColor || selectedColor}88;border-color:${lineColor || selectedColor}99">${emoji}</div>`,
+            html: `<div class="transport-marker" style="background:${c};box-shadow:0 0 16px ${c}88;border-color:${c}99">${emoji}</div>`,
             iconSize: [36, 36],
             iconAnchor: [18, 18],
         });
@@ -956,8 +957,8 @@
         if (routeLine)    map.removeLayer(routeLine);
 
         const emoji = transportEmoji || '📍';
-        originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
-        destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
+        originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji, lineColor) }).addTo(map);
+        destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji, lineColor) }).addTo(map);
 
         routeLine = L.polyline([oCoords, dCoords], {
             color: lineColor || selectedColor,
