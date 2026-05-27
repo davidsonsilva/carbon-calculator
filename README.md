@@ -55,6 +55,11 @@ python web/app.py
 - [`tests/test_calc.py`](tests/test_calc.py) — testes unitários
 - [`docs/`](docs/) — build estático para GitHub Pages
 
+## Artigo
+
+Leia o artigo completo sobre o desenvolvimento deste projeto na DIO.me:
+https://dio.me/articles/ecotrip-como-construi-uma-calculadora-de-co2-com-python-flask-e-leafletjs-09c23bcafa6e
+
 ## Licença
 
 Use conforme desejar (sem licença explícita definida).
