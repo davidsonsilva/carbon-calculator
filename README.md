@@ -57,8 +57,10 @@ python web/app.py
 
 ## Artigo
 
-Leia o artigo completo sobre o desenvolvimento deste projeto na DIO.me:
-https://dio.me/articles/ecotrip-como-construi-uma-calculadora-de-co2-com-python-flask-e-leafletjs-09c23bcafa6e
+Leia o artigo completo sobre o desenvolvimento deste projeto:
+
+- **DIO.me:** https://dio.me/articles/ecotrip-como-construi-uma-calculadora-de-co2-com-python-flask-e-leafletjs-09c23bcafa6e
+- **LinkedIn:** https://www.linkedin.com/pulse/ecotrip-como-constru%25C3%25AD-uma-calculadora-de-co-com-python-davidson-silva-bpeyf
 
 ## Licença
 
