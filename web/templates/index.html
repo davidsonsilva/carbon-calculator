@@ -260,12 +260,15 @@
         }
 
         .transport-card.selected {
-            border-color: var(--accent);
-            background: rgba(124,58,237,0.12);
-            box-shadow: 0 0 0 1px var(--accent), 0 0 20px var(--accent-glow);
+            border-color: var(--mode-color, var(--accent));
+            background: color-mix(in srgb, var(--mode-color, var(--accent)) 12%, transparent);
+            box-shadow: 0 0 0 1px var(--mode-color, var(--accent)),
+                        0 0 20px color-mix(in srgb, var(--mode-color, var(--accent)) 40%, transparent);
         }
 
-        .transport-card.selected span:last-child { color: #a78bfa; }
+        .transport-card.selected span:last-child {
+            color: var(--mode-color, #a78bfa);
+        }
 
         /* ── Submit button ── */
         .btn-submit {
@@ -749,19 +752,19 @@
             <div class="form-group">
                 <label class="form-label">Meio de Transporte</label>
                 <div class="transport-grid">
-                    <div class="transport-card" data-factor="0.00">
+                    <div class="transport-card" data-factor="0.00" data-color="#22c55e">
                         <span class="emoji">🚲</span>
                         <span>Bicicleta</span>
                     </div>
-                    <div class="transport-card selected" data-factor="0.14">
+                    <div class="transport-card selected" data-factor="0.14" data-color="#7c3aed" style="--mode-color:#7c3aed">
                         <span class="emoji">🚗</span>
                         <span>Carro</span>
                     </div>
-                    <div class="transport-card" data-factor="0.04">
+                    <div class="transport-card" data-factor="0.04" data-color="#f59e0b">
                         <span class="emoji">🚌</span>
                         <span>Ônibus</span>
                     </div>
-                    <div class="transport-card" data-factor="0.25">
+                    <div class="transport-card" data-factor="0.25" data-color="#ef4444">
                         <span class="emoji">🚚</span>
                         <span>Caminhão</span>
                     </div>
@@ -937,18 +940,17 @@
     function makeMarkerIcon(emoji) {
         return L.divIcon({
             className: '',
-            html: `<div class="transport-marker">${emoji}</div>`,
+            html: `<div class="transport-marker" style="background:${lineColor || selectedColor};box-shadow:0 0 16px ${lineColor || selectedColor}88;border-color:${lineColor || selectedColor}99">${emoji}</div>`,
             iconSize: [36, 36],
             iconAnchor: [18, 18],
         });
     }
 
-    function updateMap(originKey, destKey, transportEmoji) {
+    function updateMap(originKey, destKey, transportEmoji, lineColor) {
         const oCoords = CAPITAIS_COORDS[originKey];
         const dCoords = CAPITAIS_COORDS[destKey];
         if (!oCoords || !dCoords) return;
 
-        // remove previous
         if (originMarker) map.removeLayer(originMarker);
         if (destMarker)   map.removeLayer(destMarker);
         if (routeLine)    map.removeLayer(routeLine);
@@ -957,26 +959,23 @@
         originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
         destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
 
-        // animated dashed line
         routeLine = L.polyline([oCoords, dCoords], {
-            color: '#7c3aed',
+            color: lineColor || selectedColor,
             weight: 2.5,
             opacity: 0.9,
             dashArray: '8 6',
         }).addTo(map);
 
-        // fit bounds with padding
         map.fitBounds(L.latLngBounds([oCoords, dCoords]), { padding: [80, 80], animate: true, duration: 1 });
         document.getElementById('map').classList.add('has-route');
     }
 
-    // trigger map update when destination is filled
     function tryUpdateMap() {
         const originVal = document.getElementById('origin').value.trim();
         const destVal   = document.getElementById('destination').value.trim();
         if (!originVal || !destVal) return;
         const selEmoji = document.querySelector('.transport-card.selected .emoji');
-        updateMap(originVal, destVal, selEmoji ? selEmoji.textContent : '📍');
+        updateMap(originVal, destVal, selEmoji ? selEmoji.textContent : '📍', selectedColor);
     }
 
     // ── Datalist ──
@@ -1015,12 +1014,18 @@
     // ── Transport selection ──
     const transportCards = document.querySelectorAll('.transport-card');
     let selectedFactor = 0.14;
+    let selectedColor  = '#7c3aed';
 
     transportCards.forEach(card => {
         card.addEventListener('click', function() {
-            transportCards.forEach(c => c.classList.remove('selected'));
+            transportCards.forEach(c => {
+                c.classList.remove('selected');
+                c.style.removeProperty('--mode-color');
+            });
             this.classList.add('selected');
             selectedFactor = parseFloat(this.dataset.factor);
+            selectedColor  = this.dataset.color;
+            this.style.setProperty('--mode-color', selectedColor);
             tryUpdateMap();
         });
     });
