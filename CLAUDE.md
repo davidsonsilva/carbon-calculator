@@ -41,7 +41,7 @@ The project has two independent layers:
 - Supported profiles: `urban` (×1.2), `mixed` (×1.0), `highway` (×0.9). Unknown profiles silently fall back to ×1.0.
 
 ### `web/` — Flask UI
-- `web/app.py` — Flask app; currently uses a module-level `app` instance (no factory). `tests/test_api.py` expects a `create_app()` factory — this is not yet implemented.
+- `web/app.py` — Flask app with `create_app()` factory. Module-level `app = create_app()` keeps `python web/app.py` working. Exposes `POST /api/estimate` (single-trip and multi-segment).
 - `web/templates/index.html` — Single-page form; Material Design 3 themed.
 - `web/static/css/m3-theme.css` — M3 CSS custom property tokens.
 - `web/static/js/calculation/` — ES6 module tree following SOLID:
@@ -51,6 +51,16 @@ The project has two independent layers:
   - `ui/ResultGallery.js`, `ui/ResultSummaryCard.js`, `ui/ComparisonCard.js` — UI components
   - `utils/validators.js` — input validation
 - `web/static/js/app.js` and `web/static/app.js` — entry points (two copies; `js/app.js` is the active one using ES6 imports).
+
+### `docs/` — GitHub Pages (static)
+- `docs/index.html` and `docs/static/css/m3-theme.css` are the static build served by GitHub Pages.
+- All calculation logic is client-side JS — no backend required.
+- **After any change to `web/templates/index.html` or `web/static/css/m3-theme.css`, sync to `docs/`:**
+```bash
+sed 's|href="/static/css/m3-theme.css"|href="static/css/m3-theme.css"|' web/templates/index.html > docs/index.html
+cp web/static/css/m3-theme.css docs/static/css/m3-theme.css
+```
+- GitHub Pages settings: branch `main`, folder `/docs`.
 
 ### Test layout
 - `tests/test_calc.py` — unit tests for `eco_trip.calc`; no external deps.
