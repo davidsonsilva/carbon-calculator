@@ -35,20 +35,61 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding: 48px 16px 80px;
+            padding: 0 0 80px;
         }
 
-        /* subtle grid texture */
-        body::before {
-            content: '';
-            position: fixed;
+        /* ── Map hero ── */
+        #map-hero {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            min-height: 600px;
+        }
+
+        #map {
+            position: absolute;
             inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 48px 48px;
+            width: 100%;
+            height: 100%;
+            transform: perspective(900px) rotateX(8deg) scale(1.08);
+            transform-origin: center top;
+            filter: brightness(0.45) saturate(0.7);
+            transition: filter 0.6s ease;
+        }
+
+        #map.has-route {
+            filter: brightness(0.6) saturate(0.9);
+        }
+
+        /* overlay gradient over the map */
+        #map-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center top, transparent 20%, rgba(15,15,19,0.5) 70%),
+                linear-gradient(to bottom, transparent 50%, var(--bg) 100%);
             pointer-events: none;
-            z-index: 0;
+            z-index: 1;
+        }
+
+        /* hero content over the map */
+        .hero-content {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        /* below-map content */
+        .below-map {
+            position: relative;
+            z-index: 1;
+            padding: 0 16px 0;
         }
 
         .wrapper {
@@ -631,47 +672,23 @@
         .platform-link .pl-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
         .platform-link .pl-desc { font-size: 0.75rem; color: var(--text-muted); }
 
-        /* ── Route map card ── */
-        .route-map-card {
-            overflow: hidden;
-            margin-bottom: 12px;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-        }
-
-        @keyframes mapPulse {
-            0%   { box-shadow: 0 0 0 0   rgba(124,58,237,0.5),  0 0 0 0   rgba(124,58,237,0.25); }
-            50%  { box-shadow: 0 0 0 6px rgba(124,58,237,0.15), 0 0 0 12px rgba(124,58,237,0.05); }
-            100% { box-shadow: 0 0 0 0   rgba(124,58,237,0),    0 0 0 0   rgba(124,58,237,0); }
-        }
-
-        .route-map-card.pulse {
-            animation: mapPulse 1.2s ease-out forwards;
-        }
-
-        #route-map {
-            width: 100%;
-            height: 260px;
-            filter: brightness(0.75) saturate(0.8);
-        }
-
         /* ── Leaflet overrides ── */
         .leaflet-control-zoom,
         .leaflet-control-attribution { display: none !important; }
 
-        .leaflet-container { background: #0f0f13; }
+        .leaflet-container { background: #0f0f13; cursor: default !important; }
 
         /* custom marker */
         .transport-marker {
-            width: 34px; height: 34px;
+            width: 36px; height: 36px;
             background: rgba(124,58,237,0.85);
             border: 2px solid rgba(167,139,250,0.6);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
-            box-shadow: 0 0 16px rgba(124,58,237,0.5);
+            font-size: 1.1rem;
+            box-shadow: 0 0 16px rgba(124,58,237,0.6);
         }
 
         /* ── Responsive ── */
@@ -688,20 +705,25 @@
     </style>
 </head>
 <body>
-<div class="wrapper">
 
-    <!-- Header -->
-    <header>
-        <div class="logo">
-            <div class="logo-dot"></div>
-            EcoTrip
-        </div>
-        <h1>Calcule suas<br><span>emissões de CO₂</span></h1>
-        <p>Estime o impacto de CO₂ da sua viagem e descubra como compensar</p>
-    </header>
+<!-- Map hero -->
+<div id="map-hero">
+    <div id="map"></div>
+    <div class="hero-content">
+        <div class="wrapper">
 
-    <!-- Form card -->
-    <div class="glass form-card">
+            <!-- Header -->
+            <header>
+                <div class="logo">
+                    <div class="logo-dot"></div>
+                    EcoTrip
+                </div>
+                <h1>Calcule suas<br><span>emissões de CO₂</span></h1>
+                <p>Estime o impacto de CO₂ da sua viagem e descubra como compensar</p>
+            </header>
+
+            <!-- Form card -->
+            <div class="glass form-card">
         <form id="co2Form">
             <div class="input-row form-group">
                 <div>
@@ -752,8 +774,13 @@
         </form>
     </div>
 
-    </div>
+        </div><!-- /.wrapper -->
+    </div><!-- /.hero-content -->
+</div><!-- /#map-hero -->
 
+<!-- Results below map -->
+<div class="below-map">
+<div class="wrapper">
     <div id="resultsSection">
 
         <!-- 3 summary cards -->
@@ -773,11 +800,6 @@
                 <div class="rc-value green" id="rcCredits">—</div>
                 <div class="rc-sub" id="rcCost">—</div>
             </div>
-        </div>
-
-        <!-- Route map -->
-        <div class="route-map-card" id="routeMapCard">
-            <div id="route-map"></div>
         </div>
 
         <!-- Comparison -->
@@ -813,8 +835,8 @@
         </div>
 
     </div>
-
 </div><!-- /.wrapper -->
+</div><!-- /.below-map -->
 
 <!-- Modal -->
 <div class="modal-overlay" id="compensateModal" role="dialog" aria-modal="true">
@@ -867,7 +889,7 @@
 </div>
 
 <script>
-    // ── Route map (lazy init in results card) ──
+    // ── Map ──
     const CAPITAIS_COORDS = {
         'Rio Branco (AC)':      [-9.975,  -67.824],
         'Maceió (AL)':          [-9.666,  -35.735],
@@ -898,63 +920,65 @@
         'Palmas (TO)':          [-10.240, -48.355],
     };
 
-    let routeMap = null, originMarker = null, destMarker = null, routeLine = null;
+    const map = L.map('map', {
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+        keyboard: false,
+        attributionControl: false,
+    }).setView([-14.235, -51.925], 4);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+    }).addTo(map);
+
+    let originMarker = null, destMarker = null, routeLine = null;
 
     function makeMarkerIcon(emoji) {
         return L.divIcon({
             className: '',
             html: `<div class="transport-marker">${emoji}</div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 17],
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
         });
     }
 
-    function renderRouteMap(originKey, destKey, emoji) {
+    function updateMap(originKey, destKey, transportEmoji) {
         const oCoords = CAPITAIS_COORDS[originKey];
         const dCoords = CAPITAIS_COORDS[destKey];
         if (!oCoords || !dCoords) return;
 
-        // init map once
-        if (!routeMap) {
-            routeMap = L.map('route-map', {
-                zoomControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                touchZoom: false,
-                keyboard: false,
-                attributionControl: false,
-            });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-            }).addTo(routeMap);
-        }
+        // remove previous
+        if (originMarker) map.removeLayer(originMarker);
+        if (destMarker)   map.removeLayer(destMarker);
+        if (routeLine)    map.removeLayer(routeLine);
 
-        // clear previous layers
-        if (originMarker) routeMap.removeLayer(originMarker);
-        if (destMarker)   routeMap.removeLayer(destMarker);
-        if (routeLine)    routeMap.removeLayer(routeLine);
+        const emoji = transportEmoji || '📍';
+        originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
+        destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji) }).addTo(map);
 
-        originMarker = L.marker(oCoords, { icon: makeMarkerIcon(emoji) }).addTo(routeMap);
-        destMarker   = L.marker(dCoords, { icon: makeMarkerIcon(emoji) }).addTo(routeMap);
-
+        // animated dashed line
         routeLine = L.polyline([oCoords, dCoords], {
             color: '#7c3aed',
-            weight: 2,
+            weight: 2.5,
             opacity: 0.9,
-            dashArray: '8 5',
-        }).addTo(routeMap);
+            dashArray: '8 6',
+        }).addTo(map);
 
-        routeMap.fitBounds(L.latLngBounds([oCoords, dCoords]), { padding: [50, 50], animate: true, duration: 0.8 });
+        // fit bounds with padding
+        map.fitBounds(L.latLngBounds([oCoords, dCoords]), { padding: [80, 80], animate: true, duration: 1 });
+        document.getElementById('map').classList.add('has-route');
+    }
 
-        // pulse animation
-        const card = document.getElementById('routeMapCard');
-        card.classList.remove('pulse');
-        void card.offsetWidth; // reflow to restart animation
-        card.classList.add('pulse');
-
-        // invalidate size after card becomes visible
-        setTimeout(() => routeMap.invalidateSize(), 50);
+    // trigger map update when destination is filled
+    function tryUpdateMap() {
+        const originVal = document.getElementById('origin').value.trim();
+        const destVal   = document.getElementById('destination').value.trim();
+        if (!originVal || !destVal) return;
+        const selEmoji = document.querySelector('.transport-card.selected .emoji');
+        updateMap(originVal, destVal, selEmoji ? selEmoji.textContent : '📍');
     }
 
     // ── Datalist ──
@@ -985,7 +1009,10 @@
     document.getElementById('destination').addEventListener('blur', function() {
         if (!manualCheck.checked && this.value.trim())
             distanceInput.value = Math.floor(Math.random() * 500) + 50;
+        tryUpdateMap();
     });
+
+    document.getElementById('origin').addEventListener('blur', tryUpdateMap);
 
     // ── Transport selection ──
     const transportCards = document.querySelectorAll('.transport-card');
@@ -996,6 +1023,7 @@
             transportCards.forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
             selectedFactor = parseFloat(this.dataset.factor);
+            tryUpdateMap();
         });
     });
 
@@ -1088,10 +1116,6 @@
 
         // compensate button
         document.getElementById('btnCompensate').onclick = () => openModal(emission);
-
-        // route map
-        const selEmoji = document.querySelector('.transport-card.selected .emoji');
-        renderRouteMap(origin, destination, selEmoji ? selEmoji.textContent : '📍');
 
         // show results
         const section = document.getElementById('resultsSection');
