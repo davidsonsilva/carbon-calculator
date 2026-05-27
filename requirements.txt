@@ -1,0 +1,3 @@
+# Web requirements
+Flask>=2.0
+

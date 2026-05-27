@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Emissão de CO₂</title>
+    <link rel="stylesheet" href="/static/css/m3-theme.css">
+    <style>
+        .wrapper {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        h1 {
+            font: var(--md-sys-typescale-headline-medium);
+            color: var(--md-sys-color-primary);
+        }
+
+        header p {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface-variant);
+            max-width: 420px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .card-panel {
+            background: var(--md-sys-color-surface);
+            border-radius: var(--md-sys-shape-corner-extra-large);
+            padding: 32px;
+            box-shadow: var(--md-sys-elevation-2);
+            margin: 40px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font: var(--md-sys-typescale-label-large);
+            color: var(--md-sys-color-on-surface);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: var(--md-sys-shape-corner-small);
+            font: var(--md-sys-typescale-body-large);
+            background: var(--md-sys-color-surface-variant);
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            background: var(--md-sys-color-surface);
+            box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+        }
+
+        input:disabled {
+            background: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: not-allowed;
+        }
+
+        .info-note {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface-variant);
+            margin-top: 6px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface);
+            cursor: pointer;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--md-sys-color-primary);
+            cursor: pointer;
+        }
+
+        .transport-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .transport-card {
+            border: 1px solid var(--md-sys-color-outline);
+            background: var(--md-sys-color-surface);
+            border-radius: var(--md-sys-shape-corner-medium);
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transport-card .emoji {
+            font-size: 24px;
+        }
+
+        .transport-card span {
+            font: var(--md-sys-typescale-body-medium);
+            color: var(--md-sys-color-on-surface);
+        }
+
+        .transport-card:hover {
+            border-color: var(--md-sys-color-primary);
+            background: var(--md-sys-color-surface-variant);
+        }
+
+        .transport-card.selected {
+            background: var(--md-sys-color-secondary-container);
+            border-color: var(--md-sys-color-secondary);
+            box-shadow: 0 0 0 1px var(--md-sys-color-secondary);
+        }
+
+        button.btn-submit {
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            border-radius: var(--md-sys-shape-corner-medium);
+            font: var(--md-sys-typescale-label-large);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        button.btn-submit:hover {
+            background: #115e59;
+        }
+
+        .result-panel {
+            background: var(--md-sys-color-primary-container);
+            border-radius: var(--md-sys-shape-corner-large);
+            padding: 24px;
+            margin-top: 24px;
+            text-align: center;
+            border: 1px solid rgba(21, 128, 61, 0.2);
+            display: none;
+        }
+
+        .result-panel.active {
+            display: block;
+        }
+
+        .result-panel h3 {
+            font: var(--md-sys-typescale-label-large);
+            color: var(--md-sys-color-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--md-sys-color-on-primary-container);
+        }
+
+        #resultImages {
+            margin-top: 24px;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .transport-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <header>
+            <div class="logo-area">
+                <span class="logo-icon">🌿</span>
+                <h1>Calculadora de Emissão de CO₂</h1>
+            </div>
+            <p>Calcule as emissões de CO₂ das suas viagens e contribua para um planeta mais sustentável</p>
+        </header>
+
+        <main class="card-panel">
+            <form id="co2Form">
+                <div class="form-group">
+                    <label for="origin">Origem</label>
+                    <input type="text" id="origin" list="capitais-list" placeholder="Digite a cidade de origem" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="destination">Destino</label>
+                    <input type="text" id="destination" list="capitais-list" placeholder="Digite a cidade de destino" required>
+                </div>
+
+                <datalist id="capitais-list"></datalist>
+
+                <div class="form-group">
+                    <label for="distance">Distância (km)</label>
+                    <input type="number" id="distance" value="0" min="0" disabled required>
+                    <p class="info-note" id="distanceNote">A distância será preenchida automaticamente</p>
+                    
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="manualDistance">
+                        Inserir distância manualmente
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Meio de Transporte</label>
+                    <div class="transport-grid">
+                        <div class="transport-card" data-factor="0.00">
+                            <span class="emoji">🚲</span>
+                            <span>Bicicleta</span>
+                        </div>
+                        <div class="transport-card selected" data-factor="0.14">
+                            <span class="emoji">🚗</span>
+                            <span>Carro</span>
+                        </div>
+                        <div class="transport-card" data-factor="0.04">
+                            <span class="emoji">🚌</span>
+                            <span>Ônibus</span>
+                        </div>
+                        <div class="transport-card" data-factor="0.25">
+                            <span class="emoji">🚚</span>
+                            <span>Caminhão</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Calcular Emissão</button>
+            </form>
+
+            <div class="result-panel" id="resultPanel">
+                <h3>Resultado da Emissão</h3>
+                <p class="result-value"><span id="co2Result">0.0</span> kg de CO₂</p>
+            </div>
+
+            <div id="resultSummary"></div>
+
+            <div id="resultComparison"></div>
+
+            <div id="resultImages" class="m3-image-grid">
+                <div class="m3-image-card"><div class="caption">Árvores para compensar</div></div>
+                <div class="m3-image-card"><div class="caption">Comparativo de modos</div></div>
+                <div class="m3-image-card"><div class="caption">Sugestões de mitigação</div></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const capitais = [
+            'Rio Branco (AC)', 'Maceió (AL)', 'Macapá (AP)', 'Manaus (AM)',
+            'Salvador (BA)', 'Fortaleza (CE)', 'Brasília (DF)', 'Vitória (ES)',
+            'Goiânia (GO)', 'São Luís (MA)', 'Cuiabá (MT)', 'Campo Grande (MS)',
+            'Belo Horizonte (MG)', 'Belém (PA)', 'João Pessoa (PB)', 'Curitiba (PR)',
+            'Recife (PE)', 'Teresina (PI)', 'Rio de Janeiro (RJ)', 'Natal (RN)',
+            'Porto Alegre (RS)', 'Porto Velho (RO)', 'Boa Vista (RR)', 'Florianópolis (SC)',
+            'São Paulo (SP)', 'Aracaju (SE)', 'Palmas (TO)'
+        ];
+
+        const datalist = document.getElementById('capitais-list');
+        capitais.forEach(capital => {
+            const option = document.createElement('option');
+            option.value = capital;
+            datalist.appendChild(option);
+        });
+
+        const manualDistanceCheck = document.getElementById('manualDistance');
+        const distanceInput = document.getElementById('distance');
+        const distanceNote = document.getElementById('distanceNote');
+        const cards = document.querySelectorAll('.transport-card');
+        const form = document.getElementById('co2Form');
+        const resultPanel = document.getElementById('resultPanel');
+        const co2Result = document.getElementById('co2Result');
+        
+        let selectedFactor = 0.14; // Padrão: Carro
+
+        // Alterna entre modo manual e automático de distância
+        manualDistanceCheck.addEventListener('change', function() {
+            if (this.checked) {
+                distanceInput.disabled = false;
+                distanceInput.value = '';
+                distanceNote.style.display = 'none';
+                distanceInput.focus();
+            } else {
+                distanceInput.disabled = true;
+                distanceInput.value = '0';
+                distanceNote.style.display = 'block';
+            }
+        });
+
+        // Simulação automática ao digitar destinos (caso não esteja no modo manual)
+        document.getElementById('destination').addEventListener('blur', function() {
+            if (!manualDistanceCheck.checked && this.value.trim() !== '') {
+                distanceInput.value = Math.floor(Math.random() * 500) + 50;
+            }
+        });
+
+        cards.forEach(card => {
+            card.addEventListener('click', function() {
+                cards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedFactor = parseFloat(this.dataset.factor);
+            });
+        });
+
+    </script>
+</body>
+</html>
