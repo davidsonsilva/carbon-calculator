@@ -1063,15 +1063,19 @@
     // ── City not found modal ──
     const cityModal = document.getElementById('cityModal');
     let _pendingCityField = null;
+    let _cityModalResolve = null;
 
     function openCityModal(cityName, fieldId) {
-        _pendingCityField = fieldId;
-        document.getElementById('cityModalName').textContent = cityName;
-        document.getElementById('cityModalLoading').style.display = 'none';
-        document.getElementById('cityModalError').style.display   = 'none';
-        document.getElementById('cityModalActions').style.display = 'flex';
-        cityModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        return new Promise((resolve) => {
+            _cityModalResolve = resolve;
+            _pendingCityField = fieldId;
+            document.getElementById('cityModalName').textContent = cityName;
+            document.getElementById('cityModalLoading').style.display = 'none';
+            document.getElementById('cityModalError').style.display   = 'none';
+            document.getElementById('cityModalActions').style.display = 'flex';
+            cityModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
     }
 
     function closeCityModal() {
@@ -1080,7 +1084,7 @@
     }
 
     async function geocodeCity(name) {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + ', Brasil')}&format=json&limit=1`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=br`;
         try {
             const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
             const data = await resp.json();
@@ -1107,10 +1111,11 @@
             document.getElementById('capitais-list').appendChild(opt);
             closeCityModal();
             if (fieldId) document.getElementById(fieldId).value = cityName;
-            await autoCalcDistance();
-            tryUpdateMap();
+            const resolve = _cityModalResolve;
+            _cityModalResolve = null;
+            resolve?.(true);
         } else {
-            document.getElementById('cityModalError').textContent = 'Não foi possível encontrar esta cidade. Verifique o nome ou tente outra grafia.';
+            document.getElementById('cityModalError').textContent = 'Cidade não encontrada no Brasil. Verifique o nome ou tente outra grafia.';
             document.getElementById('cityModalError').style.display   = 'block';
             document.getElementById('cityModalActions').style.display = 'flex';
         }
@@ -1126,17 +1131,23 @@
         distIn.value     = '';
         distN.style.display = 'none';
         distIn.focus();
+        const resolve = _cityModalResolve;
+        _cityModalResolve = null;
+        resolve?.(false);
     });
 
-    async function handleCityBlur(fieldId) {
-        const val = document.getElementById(fieldId).value.trim();
-        if (!val) return;
-        if (!CAPITAIS_COORDS[val]) {
-            openCityModal(val, fieldId);
-        } else {
-            await autoCalcDistance();
-            tryUpdateMap();
-        }
+    // ── Auto-calc when both fields are valid (debounced) ──
+    let _autoCalcTimer = null;
+    function scheduleAutoCalc() {
+        clearTimeout(_autoCalcTimer);
+        _autoCalcTimer = setTimeout(async () => {
+            const ov = document.getElementById('origin').value.trim();
+            const dv = document.getElementById('destination').value.trim();
+            if (CAPITAIS_COORDS[ov] && CAPITAIS_COORDS[dv]) {
+                await autoCalcDistance();
+                tryUpdateMap();
+            }
+        }, 400);
     }
 
     // ── Datalist ──
@@ -1165,12 +1176,9 @@
         if (this.checked) distanceInput.focus();
     });
 
-    document.getElementById('destination').addEventListener('blur', function() {
-        handleCityBlur('destination');
-    });
-
-    document.getElementById('origin').addEventListener('blur', function() {
-        handleCityBlur('origin');
+    ['origin', 'destination'].forEach(id => {
+        document.getElementById(id).addEventListener('input',  scheduleAutoCalc);
+        document.getElementById(id).addEventListener('change', scheduleAutoCalc);
     });
 
     // ── Transport selection ──
@@ -1231,20 +1239,25 @@
     });
 
     // ── Form submit ──
-    document.getElementById('co2Form').addEventListener('submit', function(e) {
+    document.getElementById('co2Form').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const origin      = document.getElementById('origin').value.trim();
-        const destination = document.getElementById('destination').value.trim();
+        let origin      = document.getElementById('origin').value.trim();
+        let destination = document.getElementById('destination').value.trim();
 
         if (!manualCheck.checked) {
             if (origin && !CAPITAIS_COORDS[origin]) {
-                openCityModal(origin, 'origin');
-                return;
+                const added = await openCityModal(origin, 'origin');
+                if (!added) return;
+                origin = document.getElementById('origin').value.trim();
             }
             if (destination && !CAPITAIS_COORDS[destination]) {
-                openCityModal(destination, 'destination');
-                return;
+                const added = await openCityModal(destination, 'destination');
+                if (!added) return;
+                destination = document.getElementById('destination').value.trim();
+            }
+            if (CAPITAIS_COORDS[origin] && CAPITAIS_COORDS[destination]) {
+                await autoCalcDistance();
             }
         }
 
