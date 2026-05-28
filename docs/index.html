@@ -692,6 +692,21 @@
             box-shadow: 0 0 16px rgba(124,58,237,0.6);
         }
 
+        /* ── City modal manual button ── */
+        .btn-city-manual {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-city-manual:hover { background: rgba(255,255,255,0.08); }
+
         /* ── Responsive ── */
         @media (max-width: 520px) {
             body { padding: 32px 12px 60px; }
@@ -889,6 +904,32 @@
     </div>
 </div>
 
+<!-- City Not Found Modal -->
+<div class="modal-overlay" id="cityModal" role="dialog" aria-modal="true">
+    <div class="modal">
+        <div class="modal-header">
+            <div>
+                <h2>🏙️ Cidade não encontrada</h2>
+                <p class="modal-subtitle">Esta cidade não está na nossa lista</p>
+            </div>
+        </div>
+        <div style="padding:20px 24px 24px;">
+            <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">
+                A cidade <strong id="cityModalName" style="color:var(--text);"></strong> não foi encontrada.
+                Deseja buscá-la e adicioná-la à lista automaticamente?
+            </p>
+            <div id="cityModalLoading" style="display:none;text-align:center;padding:16px;color:var(--text-muted);font-size:0.88rem;">
+                ⏳ Buscando coordenadas...
+            </div>
+            <div id="cityModalError" style="display:none;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:0.82rem;color:#ef4444;margin-bottom:12px;"></div>
+            <div id="cityModalActions" style="display:flex;flex-direction:column;gap:8px;">
+                <button id="cityModalAdd" class="btn-submit" type="button">Sim, buscar e adicionar</button>
+                <button id="cityModalManualBtn" type="button" class="btn-city-manual">Não, inserir distância manualmente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // ── Map ──
     const CAPITAIS_COORDS = {
@@ -979,6 +1020,125 @@
         updateMap(originVal, destVal, selEmoji ? selEmoji.textContent : '📍', selectedColor);
     }
 
+    // ── City utilities ──
+    function haversineDistance(c1, c2) {
+        const R = 6371;
+        const toRad = x => x * Math.PI / 180;
+        const dLat = toRad(c2[0] - c1[0]);
+        const dLon = toRad(c2[1] - c1[1]);
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(c1[0])) * Math.cos(toRad(c2[0])) * Math.sin(dLon/2)**2;
+        return Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    async function autoCalcDistance() {
+        const manCk  = document.getElementById('manualDistance');
+        if (manCk && manCk.checked) return;
+        const ov = document.getElementById('origin').value.trim();
+        const dv = document.getElementById('destination').value.trim();
+        if (!CAPITAIS_COORDS[ov] || !CAPITAIS_COORDS[dv]) return;
+
+        const [lat1, lon1] = CAPITAIS_COORDS[ov];
+        const [lat2, lon2] = CAPITAIS_COORDS[dv];
+        const distNote = document.getElementById('distanceNote');
+        const distIn   = document.getElementById('distance');
+        distNote.textContent = '⏳ Calculando distância...';
+
+        try {
+            const url  = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                distIn.value       = Math.round(data.routes[0].distance / 1000);
+                distNote.textContent = 'Distância rodoviária (OpenStreetMap)';
+            } else {
+                distIn.value       = haversineDistance(CAPITAIS_COORDS[ov], CAPITAIS_COORDS[dv]);
+                distNote.textContent = 'Distância em linha reta (rota não disponível)';
+            }
+        } catch (_) {
+            distIn.value       = haversineDistance(CAPITAIS_COORDS[ov], CAPITAIS_COORDS[dv]);
+            distNote.textContent = 'Distância em linha reta (API indisponível)';
+        }
+    }
+
+    // ── City not found modal ──
+    const cityModal = document.getElementById('cityModal');
+    let _pendingCityField = null;
+
+    function openCityModal(cityName, fieldId) {
+        _pendingCityField = fieldId;
+        document.getElementById('cityModalName').textContent = cityName;
+        document.getElementById('cityModalLoading').style.display = 'none';
+        document.getElementById('cityModalError').style.display   = 'none';
+        document.getElementById('cityModalActions').style.display = 'flex';
+        cityModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCityModal() {
+        cityModal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    async function geocodeCity(name) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + ', Brasil')}&format=json&limit=1`;
+        try {
+            const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
+            const data = await resp.json();
+            if (data && data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        } catch (_) {}
+        return null;
+    }
+
+    document.getElementById('cityModalAdd').addEventListener('click', async function() {
+        const cityName  = document.getElementById('cityModalName').textContent;
+        const fieldId   = _pendingCityField;
+        document.getElementById('cityModalActions').style.display = 'none';
+        document.getElementById('cityModalLoading').style.display = 'block';
+        document.getElementById('cityModalError').style.display   = 'none';
+
+        const coords = await geocodeCity(cityName);
+        document.getElementById('cityModalLoading').style.display = 'none';
+
+        if (coords) {
+            CAPITAIS_COORDS[cityName] = coords;
+            capitais.push(cityName);
+            const opt = document.createElement('option');
+            opt.value = cityName;
+            document.getElementById('capitais-list').appendChild(opt);
+            closeCityModal();
+            if (fieldId) document.getElementById(fieldId).value = cityName;
+            await autoCalcDistance();
+            tryUpdateMap();
+        } else {
+            document.getElementById('cityModalError').textContent = 'Não foi possível encontrar esta cidade. Verifique o nome ou tente outra grafia.';
+            document.getElementById('cityModalError').style.display   = 'block';
+            document.getElementById('cityModalActions').style.display = 'flex';
+        }
+    });
+
+    document.getElementById('cityModalManualBtn').addEventListener('click', function() {
+        closeCityModal();
+        const manCk = document.getElementById('manualDistance');
+        const distIn = document.getElementById('distance');
+        const distN  = document.getElementById('distanceNote');
+        manCk.checked    = true;
+        distIn.disabled  = false;
+        distIn.value     = '';
+        distN.style.display = 'none';
+        distIn.focus();
+    });
+
+    async function handleCityBlur(fieldId) {
+        const val = document.getElementById(fieldId).value.trim();
+        if (!val) return;
+        if (!CAPITAIS_COORDS[val]) {
+            openCityModal(val, fieldId);
+        } else {
+            await autoCalcDistance();
+            tryUpdateMap();
+        }
+    }
+
     // ── Datalist ──
     const capitais = [
         'Rio Branco (AC)','Maceió (AL)','Macapá (AP)','Manaus (AM)',
@@ -1001,16 +1161,17 @@
         distanceInput.disabled = !this.checked;
         distanceInput.value    = this.checked ? '' : '0';
         distanceNote.style.display = this.checked ? 'none' : 'block';
+        if (!this.checked) distanceNote.textContent = 'Preenchida automaticamente ao informar o destino';
         if (this.checked) distanceInput.focus();
     });
 
     document.getElementById('destination').addEventListener('blur', function() {
-        if (!manualCheck.checked && this.value.trim())
-            distanceInput.value = Math.floor(Math.random() * 500) + 50;
-        tryUpdateMap();
+        handleCityBlur('destination');
     });
 
-    document.getElementById('origin').addEventListener('blur', tryUpdateMap);
+    document.getElementById('origin').addEventListener('blur', function() {
+        handleCityBlur('origin');
+    });
 
     // ── Transport selection ──
     const transportCards = document.querySelectorAll('.transport-card');
@@ -1065,7 +1226,9 @@
 
     modalClose.addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeModal(); closeCityModal(); }
+    });
 
     // ── Form submit ──
     document.getElementById('co2Form').addEventListener('submit', function(e) {
@@ -1073,6 +1236,18 @@
 
         const origin      = document.getElementById('origin').value.trim();
         const destination = document.getElementById('destination').value.trim();
+
+        if (!manualCheck.checked) {
+            if (origin && !CAPITAIS_COORDS[origin]) {
+                openCityModal(origin, 'origin');
+                return;
+            }
+            if (destination && !CAPITAIS_COORDS[destination]) {
+                openCityModal(destination, 'destination');
+                return;
+            }
+        }
+
         const distance    = parseFloat(distanceInput.value) || 0;
         const emission    = distance * selectedFactor;
         const modeEl      = document.querySelector('.transport-card.selected span:last-child');
