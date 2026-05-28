@@ -209,6 +209,15 @@
             margin-top: 6px;
         }
 
+        .city-status {
+            font-size: 0.75rem;
+            margin-top: 4px;
+            min-height: 1.1em;
+        }
+        .city-status.ok      { color: var(--green); }
+        .city-status.error   { color: var(--red); }
+        .city-status.loading { color: var(--text-muted); }
+
         .checkbox-label {
             display: inline-flex;
             align-items: center;
@@ -692,21 +701,6 @@
             box-shadow: 0 0 16px rgba(124,58,237,0.6);
         }
 
-        /* ── City modal manual button ── */
-        .btn-city-manual {
-            width: 100%;
-            padding: 12px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-muted);
-            font-family: inherit;
-            font-size: 0.88rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-city-manual:hover { background: rgba(255,255,255,0.08); }
-
         /* ── Responsive ── */
         @media (max-width: 520px) {
             body { padding: 32px 12px 60px; }
@@ -745,10 +739,12 @@
                 <div>
                     <label class="form-label" for="origin">Origem</label>
                     <input class="form-input" type="text" id="origin" list="capitais-list" placeholder="São Paulo (SP)" required>
+                    <p class="city-status" id="originStatus"></p>
                 </div>
                 <div>
                     <label class="form-label" for="destination">Destino</label>
                     <input class="form-input" type="text" id="destination" list="capitais-list" placeholder="Rio de Janeiro (RJ)" required>
+                    <p class="city-status" id="destinationStatus"></p>
                 </div>
             </div>
 
@@ -904,31 +900,6 @@
     </div>
 </div>
 
-<!-- City Not Found Modal -->
-<div class="modal-overlay" id="cityModal" role="dialog" aria-modal="true">
-    <div class="modal">
-        <div class="modal-header">
-            <div>
-                <h2>🏙️ Cidade não encontrada</h2>
-                <p class="modal-subtitle">Esta cidade não está na nossa lista</p>
-            </div>
-        </div>
-        <div style="padding:20px 24px 24px;">
-            <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">
-                A cidade <strong id="cityModalName" style="color:var(--text);"></strong> não foi encontrada.
-                Deseja buscá-la e adicioná-la à lista automaticamente?
-            </p>
-            <div id="cityModalLoading" style="display:none;text-align:center;padding:16px;color:var(--text-muted);font-size:0.88rem;">
-                ⏳ Buscando coordenadas...
-            </div>
-            <div id="cityModalError" style="display:none;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:0.82rem;color:#ef4444;margin-bottom:12px;"></div>
-            <div id="cityModalActions" style="display:flex;flex-direction:column;gap:8px;">
-                <button id="cityModalAdd" class="btn-submit" type="button">Sim, buscar e adicionar</button>
-                <button id="cityModalManualBtn" type="button" class="btn-city-manual">Não, inserir distância manualmente</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     // ── Map ──
@@ -1060,31 +1031,33 @@
         }
     }
 
-    // ── City not found modal ──
-    const cityModal = document.getElementById('cityModal');
-    let _pendingCityField = null;
-    let _cityModalResolve = null;
+    // ── City geocoding ──
+    const STATE_MAP = {
+        'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas',
+        'BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo',
+        'GO':'Goiás','MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul',
+        'MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná',
+        'PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte',
+        'RS':'Rio Grande do Sul','RO':'Rondônia','RR':'Roraima','SC':'Santa Catarina',
+        'SP':'São Paulo','SE':'Sergipe','TO':'Tocantins'
+    };
 
-    function openCityModal(cityName, fieldId) {
-        return new Promise((resolve) => {
-            _cityModalResolve = resolve;
-            _pendingCityField = fieldId;
-            document.getElementById('cityModalName').textContent = cityName;
-            document.getElementById('cityModalLoading').style.display = 'none';
-            document.getElementById('cityModalError').style.display   = 'none';
-            document.getElementById('cityModalActions').style.display = 'flex';
-            cityModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        });
+    function expandState(name) {
+        const m = name.trim().match(/^(.+?)\s*[,\-]?\s*([A-Z]{2})$/);
+        if (m && STATE_MAP[m[2]]) return `${m[1].trim()}, ${STATE_MAP[m[2]]}`;
+        return name;
     }
 
-    function closeCityModal() {
-        cityModal.classList.remove('active');
-        document.body.style.overflow = '';
+    function setCityStatus(fieldId, type, msg) {
+        const el = document.getElementById(fieldId + 'Status');
+        if (!el) return;
+        el.className = 'city-status' + (type ? ' ' + type : '');
+        el.textContent = msg;
     }
 
     async function geocodeCity(name) {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=br`;
+        const query = expandState(name);
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br`;
         try {
             const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
             const data = await resp.json();
@@ -1093,61 +1066,40 @@
         return null;
     }
 
-    document.getElementById('cityModalAdd').addEventListener('click', async function() {
-        const cityName  = document.getElementById('cityModalName').textContent;
-        const fieldId   = _pendingCityField;
-        document.getElementById('cityModalActions').style.display = 'none';
-        document.getElementById('cityModalLoading').style.display = 'block';
-        document.getElementById('cityModalError').style.display   = 'none';
-
-        const coords = await geocodeCity(cityName);
-        document.getElementById('cityModalLoading').style.display = 'none';
-
+    async function ensureCity(val, fieldId) {
+        if (!val) return false;
+        if (CAPITAIS_COORDS[val]) { setCityStatus(fieldId, 'ok', '✓'); return true; }
+        setCityStatus(fieldId, 'loading', '⏳ Buscando cidade...');
+        const coords = await geocodeCity(val);
         if (coords) {
-            CAPITAIS_COORDS[cityName] = coords;
-            capitais.push(cityName);
-            const opt = document.createElement('option');
-            opt.value = cityName;
-            document.getElementById('capitais-list').appendChild(opt);
-            closeCityModal();
-            if (fieldId) document.getElementById(fieldId).value = cityName;
-            const resolve = _cityModalResolve;
-            _cityModalResolve = null;
-            resolve?.(true);
-        } else {
-            document.getElementById('cityModalError').textContent = 'Cidade não encontrada no Brasil. Verifique o nome ou tente outra grafia.';
-            document.getElementById('cityModalError').style.display   = 'block';
-            document.getElementById('cityModalActions').style.display = 'flex';
+            CAPITAIS_COORDS[val] = coords;
+            if (!capitais.includes(val)) {
+                capitais.push(val);
+                const opt = document.createElement('option');
+                opt.value = val;
+                document.getElementById('capitais-list').appendChild(opt);
+            }
+            setCityStatus(fieldId, 'ok', '✓ Cidade encontrada');
+            return true;
         }
-    });
+        setCityStatus(fieldId, 'error', '✗ Cidade não encontrada no Brasil');
+        return false;
+    }
 
-    document.getElementById('cityModalManualBtn').addEventListener('click', function() {
-        closeCityModal();
-        const manCk = document.getElementById('manualDistance');
-        const distIn = document.getElementById('distance');
-        const distN  = document.getElementById('distanceNote');
-        manCk.checked    = true;
-        distIn.disabled  = false;
-        distIn.value     = '';
-        distN.style.display = 'none';
-        distIn.focus();
-        const resolve = _cityModalResolve;
-        _cityModalResolve = null;
-        resolve?.(false);
-    });
-
-    // ── Auto-calc when both fields are valid (debounced) ──
+    // ── Auto-geocode + auto-calc (debounced on input/change) ──
     let _autoCalcTimer = null;
     function scheduleAutoCalc() {
         clearTimeout(_autoCalcTimer);
         _autoCalcTimer = setTimeout(async () => {
             const ov = document.getElementById('origin').value.trim();
             const dv = document.getElementById('destination').value.trim();
-            if (CAPITAIS_COORDS[ov] && CAPITAIS_COORDS[dv]) {
+            const okO = ov ? await ensureCity(ov, 'origin')     : false;
+            const okD = dv ? await ensureCity(dv, 'destination') : false;
+            if (okO && okD) {
                 await autoCalcDistance();
                 tryUpdateMap();
             }
-        }, 400);
+        }, 600);
     }
 
     // ── Datalist ──
@@ -1235,31 +1187,22 @@
     modalClose.addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeCityModal(); }
+        if (e.key === 'Escape') closeModal();
     });
 
     // ── Form submit ──
     document.getElementById('co2Form').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        let origin      = document.getElementById('origin').value.trim();
-        let destination = document.getElementById('destination').value.trim();
+        const origin      = document.getElementById('origin').value.trim();
+        const destination = document.getElementById('destination').value.trim();
 
         if (!manualCheck.checked) {
-            if (origin && !CAPITAIS_COORDS[origin]) {
-                const added = await openCityModal(origin, 'origin');
-                if (!added) return;
-                origin = document.getElementById('origin').value.trim();
-            }
-            if (destination && !CAPITAIS_COORDS[destination]) {
-                const added = await openCityModal(destination, 'destination');
-                if (!added) return;
-                destination = document.getElementById('destination').value.trim();
-            }
-            if (CAPITAIS_COORDS[origin] && CAPITAIS_COORDS[destination]) {
-                await autoCalcDistance();
-                tryUpdateMap();
-            }
+            const okO = await ensureCity(origin,      'origin');
+            const okD = await ensureCity(destination, 'destination');
+            if (!okO || !okD) return;
+            await autoCalcDistance();
+            tryUpdateMap();
         }
 
         const distance    = parseFloat(distanceInput.value) || 0;
